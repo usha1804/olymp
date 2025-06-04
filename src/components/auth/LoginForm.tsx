@@ -1,9 +1,10 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
 const LoginForm = () => {
+  const navigate = useNavigate();
   const [role, setRole] = useState("user");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -11,16 +12,51 @@ const LoginForm = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+   
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Login attempt with:", { role, email, password, rememberMe });
+    try {
+      const response = await fetch("http://localhost:8081/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data || "Login failed");
+      }
+
+      // Login successful
+      console.log("Login successful", data);
+      
+      // Store user data if remember me is checked
+      if (rememberMe) {
+        localStorage.setItem("user", JSON.stringify(data));
+      } else {
+        sessionStorage.setItem("user", JSON.stringify(data));
+      }
+
+      // Redirect based on role
+      if (role === "admin") {
+        navigate("/admin-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (err) {
+    
+      console.error("Login error:", err);
+    } finally {
       setIsLoading(false);
-      // Here you would typically redirect to dashboard after successful login
-    }, 1500);
+    }
   };
 
   return (
