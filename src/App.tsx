@@ -1,25 +1,28 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import React, { useState, useMemo, useContext } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./components/auth/AuthContext";
-import ScrollToTop from "./components/ScrollToTop"; // Add this import
+import ScrollToTop from "./components/ScrollToTop";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+// Import components
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/RegisterPage";
 import ExamsPage from "./pages/ExamsPage";
+import MockTestsPage from "./pages/MockTestsPage"; // Add this import
+import MockTestPage from "./pages/mock-test/MockTestPage"; // Add this import
 import ExamDetailPage from "./pages/ExamDetailPage";
-import MockTestPage from "./pages/mock-test/MockTestPage";
 import ExamResultPage from "./pages/ExamResultPage";
-import DashboardPage from "./pages/DashboardPage";
-import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
 import BlogPage from "./pages/BlogPage";
 import BlogDetailPage from "./pages/BlogDetailPage";
+import DashboardPage from "./pages/DashboardPage";
+import ContactPage from "./pages/ContactPage";
 import NotFound from "./pages/NotFound";
 import SalesDashboard from "./pages/SalesDashboard";
 import SchoolDashboard from "./pages/SchoolDashboard";
@@ -179,6 +182,7 @@ const App = () => (
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/exams" element={<ExamsPage />} />
               <Route path="/exams/:id" element={<ExamDetailPage />} />
+              <Route path="/mock-tests" element={<MockTestsPage />} /> {/* Add this route */}
               <Route path="/mock-tests/:id" element={<MockTestPage />} />
               <Route path="/exam-results/:id" element={<ExamResultPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
