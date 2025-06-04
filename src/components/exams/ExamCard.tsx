@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Calendar, Clock, BookOpen, ChevronRight } from "lucide-react";
 
@@ -29,48 +28,47 @@ const ExamCard = ({ id, title, subject, date, duration, difficulty, image }: Exa
 
   return (
     <div className="bg-white rounded-lg overflow-hidden shadow-md border border-gray-100 card-hover">
-      <div className="relative">
+      <div className="relative overflow-hidden">
         <img 
           src={image} 
           alt={title} 
-          className="w-full h-48 object-cover"
+          className="w-full h-48 object-cover transition-transform duration-500 ease-in-out hover:scale-110"
         />
-        <div className="absolute top-4 right-4">
-          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getDifficultyColor()}`}>
+        <div className="absolute top-3 right-3 z-10">
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getDifficultyColor()}`}>
             {difficulty}
           </span>
         </div>
       </div>
       
       <div className="p-5">
-        <div className="text-sm font-medium text-education-blue mb-2">{subject}</div>
-        <h3 className="text-xl font-semibold mb-3 text-education-dark">{title}</h3>
+        <div className="flex items-center text-sm text-gray-500 mb-2">
+          <BookOpen size={16} className="mr-1" />
+          <span>{subject}</span>
+        </div>
         
-        <div className="flex flex-col space-y-2 mb-4">
-          <div className="flex items-center text-gray-600 text-sm">
-            <Calendar size={16} className="mr-2" />
+        <h3 className="text-lg font-semibold text-education-dark mb-3 line-clamp-2">
+          {title}
+        </h3>
+        
+        <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+          <div className="flex items-center">
+            <Calendar size={16} className="mr-1" />
             <span>{date}</span>
           </div>
-          <div className="flex items-center text-gray-600 text-sm">
-            <Clock size={16} className="mr-2" />
+          <div className="flex items-center">
+            <Clock size={16} className="mr-1" />
             <span>{duration}</span>
           </div>
         </div>
         
-        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-          <Link 
-            to={`/mock-tests/${id}`}
-            className="text-education-teal hover:text-teal-700 font-medium flex items-center text-sm"
-          >
-            <BookOpen size={16} className="mr-1" /> Try Mock Test
-          </Link>
-          <Link 
-            to={`/exams/${id}`}
-            className="text-education-blue hover:text-blue-700 font-medium flex items-center text-sm"
-          >
-            View Details <ChevronRight size={16} />
-          </Link>
-        </div>
+        <Link 
+          to={`/exams/${id}`}
+          className="inline-flex items-center text-education-blue hover:text-blue-700 font-medium transition-colors"
+        >
+          Learn More
+          <ChevronRight size={16} className="ml-1" />
+        </Link>
       </div>
     </div>
   );

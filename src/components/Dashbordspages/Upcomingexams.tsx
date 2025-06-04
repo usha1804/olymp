@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Clock, Calendar, Info, Download, Plus, Upload, X, FileText, Check } from 'lucide-react';
+import { Clock, Calendar, Info, Download, Plus, Upload, X, FileText, Check, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
 
 interface Exam {
   id: string;
@@ -8,6 +8,7 @@ interface Exam {
   time: string;
   subject: string;
   description?: string;
+  image?: string; // Add image field
 }
 
 interface UpcomingExamsProps {
@@ -28,7 +29,8 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
       date: '2025-06-15', 
       time: '10:00 AM', 
       subject: 'Mathematics',
-      description: 'Annual mathematics competition covering algebra, geometry, and calculus.'
+      description: 'Annual mathematics competition covering algebra, geometry, and calculus.',
+      image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
     },
     { 
       id: '2', 
@@ -36,7 +38,8 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
       date: '2025-07-05', 
       time: '2:00 PM', 
       subject: 'Science',
-      description: 'Science quiz covering physics, chemistry, and biology concepts.' 
+      description: 'Science quiz covering physics, chemistry, and biology concepts.',
+      image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
     },
     { 
       id: '3', 
@@ -44,7 +47,8 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
       date: '2025-07-22', 
       time: '11:00 AM', 
       subject: 'English',
-      description: 'Literature and grammar assessment for all grades.' 
+      description: 'Literature and grammar assessment for all grades.',
+      image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
     },
   ]);
 
@@ -57,14 +61,22 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   
+  // Image upload states
+  const [imageUploadType, setImageUploadType] = useState<'url' | 'file'>('url');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   
   const [newExam, setNewExam] = useState<Partial<Exam>>({
     title: '',
     date: '',
     time: '',
     subject: '',
-    description: ''
+    description: '',
+    image: ''
   });
 
   // Template options
@@ -89,21 +101,101 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     }
   ];
 
+  // Handle image file upload
+  const handleImageFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!validTypes.includes(file.type)) {
+        alert('Please upload a valid image file (PNG, JPG, or JPEG)');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size should be less than 5MB');
+        return;
+      }
+
+      setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setImagePreview(result);
+        setNewExam(prev => ({ ...prev, image: result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle image URL input
+  const handleImageUrlChange = (url: string) => {
+    setImagePreview(url);
+    setNewExam(prev => ({ ...prev, image: url }));
+  };
+
+  // Upload image to server (if needed)
+  const uploadImageToServer = async (file: File): Promise<string> => {
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('http://localhost:8081/api/upload/image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const data = await response.json();
+      return data.imageUrl; // Assuming the server returns { imageUrl: "..." }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const handleAddExam = async () => {
     if (newExam.title && newExam.date && newExam.time && newExam.subject) {
       try {
+        setIsProcessing(true);
+        
+        let finalImageUrl = newExam.image || '';
+
+        // If user uploaded a file, upload it to server first
+        if (imageUploadType === 'file' && imageFile) {
+          try {
+            finalImageUrl = await uploadImageToServer(imageFile);
+          } catch (error) {
+            // If image upload fails, continue without image or use the preview
+            console.warn('Image upload failed, proceeding without server upload');
+            finalImageUrl = imagePreview;
+          }
+        }
+
+        const examData = {
+          title: newExam.title,
+          date: newExam.date,
+          time: newExam.time,
+          subject: newExam.subject,
+          description: newExam.description,
+          image: finalImageUrl,
+        };
+
         const response = await fetch('http://localhost:8081/api/exams', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            title: newExam.title,
-            date: newExam.date,
-            time: newExam.time,
-            subject: newExam.subject,
-            description: newExam.description,
-          }),
+          body: JSON.stringify(examData),
         });
 
         if (!response.ok) {
@@ -112,20 +204,28 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
 
         const newExamData = await response.json();
         setExams([...exams, newExamData]);
+        
+        // Reset form
         setNewExam({
           title: '',
           date: '',
           time: '',
           subject: '',
           description: '',
+          image: ''
         });
+        setImageFile(null);
+        setImagePreview('');
         setShowAddExam(false);
+        
       } catch (error) {
         console.error('Error adding exam:', error);
         alert('Failed to add exam. Please try again.');
+      } finally {
+        setIsProcessing(false);
       }
     }
-};
+  };
 
   const handleDeleteExam = (id: string) => {
     setExams(exams.filter(exam => exam.id !== id));
@@ -197,12 +297,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
       // Simulate certificate generation process
       for (let i = 0; i < eligibleStudents.length; i++) {
         const student = eligibleStudents[i];
-        
-        // Here you would typically:
-        // 1. Load the selected PPTX template
-        // 2. Replace placeholders with student data
-        // 3. Convert to PDF
-        // 4. Save or download the certificate
         
         console.log(`Generating certificate for ${student.name} with ${student.percentage}% using template ${selectedTemplate}`);
         
@@ -430,13 +524,15 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         </>
       )}
 
-      {/* Rest of the existing component code... */}
+      {/* Enhanced Add Exam Form */}
       {showAddExam && (userType === 'admin' || userType === 'school') && (
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-6">
           <h2 className="text-lg font-semibold mb-4">Add New Exam</h2>
+          
+          {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Exam Title</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Exam Title *</label>
               <input
                 type="text"
                 value={newExam.title}
@@ -446,7 +542,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
               <input
                 type="text"
                 value={newExam.subject}
@@ -456,7 +552,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
               <input
                 type="date"
                 value={newExam.date}
@@ -465,7 +561,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
               <input
                 type="time"
                 value={newExam.time}
@@ -474,7 +570,9 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
               />
             </div>
           </div>
-          <div className="mb-4">
+
+          {/* Description */}
+          <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea
               value={newExam.description}
@@ -484,70 +582,218 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
               className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-education-blue focus:border-transparent"
             />
           </div>
+
+          {/* Image Upload Section */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-3">Exam Image</label>
+            
+            {/* Upload Type Selector */}
+            <div className="flex gap-4 mb-4">
+              <button
+                type="button"
+                onClick={() => setImageUploadType('url')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
+                  imageUploadType === 'url' 
+                    ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                    : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <LinkIcon size={16} />
+                Image URL
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageUploadType('file')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
+                  imageUploadType === 'file' 
+                    ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                    : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Upload size={16} />
+                Upload File
+              </button>
+            </div>
+
+            {/* URL Input */}
+            {imageUploadType === 'url' && (
+              <div>
+                <input
+                  type="url"
+                  placeholder="Enter image URL (https://...)"
+                  value={newExam.image || ''}
+                  onChange={(e) => handleImageUrlChange(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-education-blue focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter a direct link to an image (PNG, JPG, JPEG)
+                </p>
+              </div>
+            )}
+
+            {/* File Upload */}
+            {imageUploadType === 'file' && (
+              <div>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <div className="text-center">
+                    <ImageIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg"
+                      onChange={handleImageFileUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Choose Image File
+                    </button>
+                    <p className="text-xs text-gray-500 mt-2">
+                      PNG, JPG, JPEG up to 5MB
+                    </p>
+                  </div>
+                </div>
+                {imageFile && (
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+                    Selected: {imageFile.name}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Image Preview */}
+            {imagePreview && (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+                <div className="relative w-full h-40 bg-gray-100 rounded-lg overflow-hidden">
+                  <img 
+                    src={imagePreview} 
+                    alt="Exam preview" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA9TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjOTk5IiBzdHJva2U9IiM5OTkiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=';
+                      e.currentTarget.alt = 'Failed to load image';
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImagePreview('');
+                      setImageFile(null);
+                      setNewExam(prev => ({ ...prev, image: '' }));
+                    }}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Form Actions */}
           <div className="flex justify-end space-x-2">
             <button
-              onClick={() => setShowAddExam(false)}
+              type="button"
+              onClick={() => {
+                setShowAddExam(false);
+                setImagePreview('');
+                setImageFile(null);
+                setNewExam({
+                  title: '',
+                  date: '',
+                  time: '',
+                  subject: '',
+                  description: '',
+                  image: ''
+                });
+              }}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleAddExam}
-              className="px-4 py-2 bg-education-blue text-white rounded-md hover:bg-blue-700 transition-colors"
+              disabled={isProcessing || isUploadingImage}
+              className="px-4 py-2 bg-education-blue text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add Exam
+              {isProcessing || isUploadingImage ? 'Adding...' : 'Add Exam'}
             </button>
           </div>
         </div>
       )}
 
+      {/* Exam List with Images */}
       <div className="grid grid-cols-1 gap-4">
         {exams.map(exam => (
-          <div key={exam.id} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="flex flex-col md:flex-row justify-between">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">{exam.title}</h3>
-                <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1 text-education-blue" />
-                    <span>{formatDate(exam.date)}</span>
+          <div key={exam.id} className="bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden">
+            <div className="flex flex-col md:flex-row">
+              {/* Exam Image */}
+              {exam.image && (
+                <div className="md:w-48 h-48 md:h-auto overflow-hidden">
+                  <img 
+                    src={exam.image} 
+                    alt={exam.title}
+                    className="w-full h-full object-cover transition-transform duration-500 ease-in-out hover:scale-110"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+              
+              {/* Exam Content */}
+              <div className="flex-1 p-6">
+                <div className="flex flex-col md:flex-row justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">{exam.title}</h3>
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-1 text-education-blue" />
+                        <span>{formatDate(exam.date)}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-1 text-education-blue" />
+                        <span>{exam.time}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Info className="h-4 w-4 mr-1 text-education-blue" />
+                        <span>{exam.subject}</span>
+                      </div>
+                    </div>
+                    {exam.description && (
+                      <p className="text-sm text-gray-500 mb-4">{exam.description}</p>
+                    )}
                   </div>
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 mr-1 text-education-blue" />
-                    <span>{exam.time}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Info className="h-4 w-4 mr-1 text-education-blue" />
-                    <span>{exam.subject}</span>
+                  <div className="flex items-center space-x-2 mt-4 md:mt-0">
+                    {userType === 'student' && (
+                      <button className="flex items-center gap-1 px-3 py-1.5 bg-education-blue text-white rounded-md hover:bg-blue-700 transition-colors text-sm">
+                        <Download size={16} />
+                        Materials
+                      </button>
+                    )}
+                    {(userType === 'admin' || userType === 'school') && (
+                      <>
+                        <button 
+                          onClick={() => handleGenerateCertificate(exam.id, exam.title)}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm"
+                        >
+                          Generate Certificates
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteExam(exam.id)}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-sm"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
-                {exam.description && (
-                  <p className="text-sm text-gray-500 mb-4">{exam.description}</p>
-                )}
-              </div>
-              <div className="flex items-center space-x-2 mt-4 md:mt-0">
-                {userType === 'student' && (
-                  <button className="flex items-center gap-1 px-3 py-1.5 bg-education-blue text-white rounded-md hover:bg-blue-700 transition-colors text-sm">
-                    <Download size={16} />
-                    Materials
-                  </button>
-                )}
-                {(userType === 'admin' || userType === 'school') && (
-                  <>
-                    <button 
-                      onClick={() => handleGenerateCertificate(exam.id, exam.title)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm"
-                    >
-                      Generate Certificates
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteExam(exam.id)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-sm"
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
               </div>
             </div>
           </div>

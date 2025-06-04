@@ -36,6 +36,17 @@ const MockTestsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("All");
   const [selectedDifficulty, setSelectedDifficulty] = useState("All");
+  
+  // Track which test cards have expanded topics
+  const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
+
+  // Toggle topics expansion for a specific test
+  const toggleTopicsExpansion = (testId: string) => {
+    setExpandedTopics(prev => ({
+      ...prev,
+      [testId]: !prev[testId]
+    }));
+  };
 
   // Mock data for tests
   const mockTests: MockTest[] = [
@@ -64,7 +75,7 @@ const MockTestsPage = () => {
       rating: 4.5,
       participants: 890,
       description: "Advanced mechanics problems designed to test your understanding of classical physics principles.",
-      topics: ["Classical Mechanics", "Thermodynamics", "Waves", "Electromagnetism"],
+      topics: ["Classical Mechanics", "Thermodynamics", "Waves", "Electromagnetism", "Quantum Physics", "Relativity"],
       isPopular: true,
       isFree: false
     },
@@ -91,7 +102,7 @@ const MockTestsPage = () => {
       rating: 4.8,
       participants: 567,
       description: "For serious mathematics competitors. Features complex problems in advanced topics.",
-      topics: ["Calculus", "Linear Algebra", "Differential Equations", "Complex Analysis"],
+      topics: ["Calculus", "Linear Algebra", "Differential Equations", "Complex Analysis", "Real Analysis", "Abstract Algebra", "Topology"],
       isPopular: true,
       isFree: false
     },
@@ -105,7 +116,7 @@ const MockTestsPage = () => {
       rating: 4.4,
       participants: 1456,
       description: "Comprehensive biology test covering molecular biology, ecology, and genetics.",
-      topics: ["Molecular Biology", "Genetics", "Ecology", "Evolution"],
+      topics: ["Molecular Biology", "Genetics", "Ecology", "Evolution", "Biochemistry", "Cell Biology"],
       isFree: true
     },
     {
@@ -118,7 +129,7 @@ const MockTestsPage = () => {
       rating: 4.6,
       participants: 734,
       description: "Test your algorithmic thinking and programming problem-solving skills.",
-      topics: ["Data Structures", "Algorithms", "Dynamic Programming", "Graph Theory"],
+      topics: ["Data Structures", "Algorithms", "Dynamic Programming", "Graph Theory", "Machine Learning", "Database Systems", "Software Engineering"],
       isFree: false
     }
   ];
@@ -144,6 +155,42 @@ const MockTestsPage = () => {
       case 'Hard': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // Component to render topics with expand/collapse functionality
+  const TopicsSection = ({ test }: { test: MockTest }) => {
+    const isExpanded = expandedTopics[test.id];
+    const shouldShowMoreBadge = test.topics.length > 3;
+    const topicsToShow = isExpanded ? test.topics : test.topics.slice(0, 3);
+    const remainingCount = test.topics.length - 3;
+
+    return (
+      <div className="flex flex-wrap gap-1">
+        {topicsToShow.map((topic, index) => (
+          <Badge key={index} variant="outline" className="text-xs">
+            {topic}
+          </Badge>
+        ))}
+        {shouldShowMoreBadge && !isExpanded && (
+          <Badge 
+            variant="outline" 
+            className="text-xs cursor-pointer hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
+            onClick={() => toggleTopicsExpansion(test.id)}
+          >
+            +{remainingCount} more
+          </Badge>
+        )}
+        {isExpanded && shouldShowMoreBadge && (
+          <Badge 
+            variant="outline" 
+            className="text-xs cursor-pointer hover:bg-gray-50 hover:text-gray-700 hover:border-gray-300 transition-colors"
+            onClick={() => toggleTopicsExpansion(test.id)}
+          >
+            Show less
+          </Badge>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -236,12 +283,12 @@ const MockTestsPage = () => {
           {filteredTests.map((test) => (
             <Card key={test.id} className="hover:shadow-lg transition-shadow duration-300 overflow-hidden">
               {/* Card Header with Image */}
-              <div className="relative h-48 bg-gradient-to-br from-blue-500 to-indigo-600">
+              <div className="relative h-48 bg-gradient-to-br from-blue-500 to-indigo-600 overflow-hidden">
                 {test.image ? (
                   <img 
                     src={test.image} 
                     alt={test.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-500 ease-in-out hover:scale-110"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -250,7 +297,7 @@ const MockTestsPage = () => {
                 )}
                 
                 {/* Badges */}
-                <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+                <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-10">
                   {test.isPopular && (
                     <Badge className="bg-orange-500 text-white border-none">
                       <Star className="h-3 w-3 mr-1" />
@@ -265,7 +312,7 @@ const MockTestsPage = () => {
                 </div>
 
                 {/* Difficulty Badge */}
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 z-10">
                   <Badge className={getDifficultyColor(test.difficulty)}>
                     {test.difficulty}
                   </Badge>
@@ -285,19 +332,8 @@ const MockTestsPage = () => {
                   {test.description}
                 </p>
 
-                {/* Topics */}
-                <div className="flex flex-wrap gap-1">
-                  {test.topics.slice(0, 3).map((topic, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {topic}
-                    </Badge>
-                  ))}
-                  {test.topics.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{test.topics.length - 3} more
-                    </Badge>
-                  )}
-                </div>
+                {/* Topics - Using the new TopicsSection component */}
+                <TopicsSection test={test} />
 
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-2 text-sm text-gray-600">

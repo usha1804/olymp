@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -159,16 +158,16 @@ const BlogPage = () => {
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {featuredPosts.slice(0, 2).map(post => (
+              {featuredPosts.map(post => (
                 <Link to={`/blog/${post.id}`} key={post.id} className="group">
                   <Card className="h-full overflow-hidden hover:shadow-md transition-shadow">
                     <div className="relative h-48 overflow-hidden">
                       <img 
                         src={post.image} 
                         alt={post.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
                       />
-                      <div className="absolute top-4 left-4">
+                      <div className="absolute top-4 left-4 z-10">
                         <Badge variant="secondary" className="bg-white/90 text-education-blue">
                           Featured
                         </Badge>
@@ -286,7 +285,7 @@ const BlogPage = () => {
                       <img 
                         src={post.image} 
                         alt={post.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
                       />
                     </div>
                     <CardHeader className="pb-2">
