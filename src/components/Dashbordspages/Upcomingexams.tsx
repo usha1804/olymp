@@ -67,6 +67,9 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
   const [imagePreview, setImagePreview] = useState<string>('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   
+  // Drag and drop state
+  const [isDragOver, setIsDragOver] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   
@@ -100,6 +103,72 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
       preview: '/templates/template3-preview.jpg'
     }
   ];
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Only set isDragOver to false if we're leaving the drop zone entirely
+    // This prevents flickering when dragging over child elements
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+
+    if (imageFile) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!validTypes.includes(imageFile.type)) {
+        alert('Please upload a valid image file (PNG, JPG, or JPEG)');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (imageFile.size > 5 * 1024 * 1024) {
+        alert('File size should be less than 5MB');
+        return;
+      }
+
+      // Process the dropped image file
+      setImageFile(imageFile);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        setImagePreview(result);
+        setNewExam(prev => ({ ...prev, image: result }));
+      };
+      reader.readAsDataURL(imageFile);
+    } else {
+      alert('Please drop a valid image file (PNG, JPG, or JPEG)');
+    }
+  };
 
   // Handle image file upload
   const handleImageFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,6 +285,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         });
         setImageFile(null);
         setImagePreview('');
+        setIsDragOver(false);
         setShowAddExam(false);
         
       } catch (error) {
@@ -631,10 +701,20 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
               </div>
             )}
 
-            {/* File Upload */}
+            {/* File Upload with Drag and Drop */}
             {imageUploadType === 'file' && (
               <div>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                <div 
+                  className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
+                    isDragOver 
+                      ? 'border-blue-400 bg-blue-50' 
+                      : 'border-gray-300'
+                  }`}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
                   <div className="text-center">
                     <ImageIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
                     <input
@@ -653,6 +733,9 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                     </button>
                     <p className="text-xs text-gray-500 mt-2">
                       PNG, JPG, JPEG up to 5MB
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      or drag and drop an image here
                     </p>
                   </div>
                 </div>
@@ -674,7 +757,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                     alt="Exam preview" 
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA9TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjOTk5IiBzdHJva2U9IiM5OTkiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=';
+                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjOTk5IiBzdHJva2U9IiM5OTkiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=';
                       e.currentTarget.alt = 'Failed to load image';
                     }}
                   />
@@ -702,6 +785,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                 setShowAddExam(false);
                 setImagePreview('');
                 setImageFile(null);
+                setIsDragOver(false);
                 setNewExam({
                   title: '',
                   date: '',
