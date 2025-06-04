@@ -89,27 +89,43 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     }
   ];
 
-  const handleAddExam = () => {
+  const handleAddExam = async () => {
     if (newExam.title && newExam.date && newExam.time && newExam.subject) {
-      const exam = {
-        id: Math.random().toString(36).substr(2, 9),
-        title: newExam.title,
-        date: newExam.date,
-        time: newExam.time,
-        subject: newExam.subject,
-        description: newExam.description
-      };
-      setExams([...exams, exam]);
-      setNewExam({
-        title: '',
-        date: '',
-        time: '',
-        subject: '',
-        description: ''
-      });
-      setShowAddExam(false);
+      try {
+        const response = await fetch('http://localhost:8081/api/exams', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: newExam.title,
+            date: newExam.date,
+            time: newExam.time,
+            subject: newExam.subject,
+            description: newExam.description,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to add exam');
+        }
+
+        const newExamData = await response.json();
+        setExams([...exams, newExamData]);
+        setNewExam({
+          title: '',
+          date: '',
+          time: '',
+          subject: '',
+          description: '',
+        });
+        setShowAddExam(false);
+      } catch (error) {
+        console.error('Error adding exam:', error);
+        alert('Failed to add exam. Please try again.');
+      }
     }
-  };
+};
 
   const handleDeleteExam = (id: string) => {
     setExams(exams.filter(exam => exam.id !== id));
