@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Clock, Calendar, Info, Download, Plus, Upload, X, FileText, Check, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
 
 interface Exam {
@@ -8,7 +8,7 @@ interface Exam {
   time: string;
   subject: string;
   description?: string;
-  image?: string; // Add image field
+  image?: string;
 }
 
 interface UpcomingExamsProps {
@@ -22,36 +22,8 @@ interface StudentData {
 }
 
 const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
-  const [exams, setExams] = useState<Exam[]>([
-    { 
-      id: '1', 
-      title: 'Mathematics Olympiad', 
-      date: '2025-06-15', 
-      time: '10:00 AM', 
-      subject: 'Mathematics',
-      description: 'Annual mathematics competition covering algebra, geometry, and calculus.',
-      image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
-    },
-    { 
-      id: '2', 
-      title: 'Science Quiz', 
-      date: '2025-07-05', 
-      time: '2:00 PM', 
-      subject: 'Science',
-      description: 'Science quiz covering physics, chemistry, and biology concepts.',
-      image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
-    },
-    { 
-      id: '3', 
-      title: 'English Literature', 
-      date: '2025-07-22', 
-      time: '11:00 AM', 
-      subject: 'English',
-      description: 'Literature and grammar assessment for all grades.',
-      image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
-    },
-  ]);
-
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showAddExam, setShowAddExam] = useState(false);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
@@ -60,14 +32,10 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  
-  // Image upload states
   const [imageUploadType, setImageUploadType] = useState<'url' | 'file'>('url');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  
-  // Drag and drop state
   const [isDragOver, setIsDragOver] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,6 +49,26 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     description: '',
     image: ''
   });
+
+  // Fetch exams on component mount
+  useEffect(() => {
+    const fetchExams = async () => {
+      try {
+        const response = await fetch('http://localhost:8081/api/exams');
+        if (!response.ok) {
+          throw new Error('Failed to fetch exams');
+        }
+        const data = await response.json();
+        setExams(data);
+      } catch (error) {
+        console.error('Error fetching exams:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchExams();
+  }, []);
 
   // Template options
   const certificateTemplates = [
@@ -115,8 +103,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // Only set isDragOver to false if we're leaving the drop zone entirely
-    // This prevents flickering when dragging over child elements
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX;
     const y = e.clientY;
@@ -141,23 +127,19 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     const imageFile = files.find(file => file.type.startsWith('image/'));
 
     if (imageFile) {
-      // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!validTypes.includes(imageFile.type)) {
         alert('Please upload a valid image file (PNG, JPG, or JPEG)');
         return;
       }
 
-      // Validate file size (max 5MB)
       if (imageFile.size > 5 * 1024 * 1024) {
         alert('File size should be less than 5MB');
         return;
       }
 
-      // Process the dropped image file
       setImageFile(imageFile);
       
-      // Create preview
       const reader = new FileReader();
       reader.onload = (event) => {
         const result = event.target?.result as string;
@@ -170,18 +152,15 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     }
   };
 
-  // Handle image file upload
   const handleImageFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!validTypes.includes(file.type)) {
         alert('Please upload a valid image file (PNG, JPG, or JPEG)');
         return;
       }
 
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         alert('File size should be less than 5MB');
         return;
@@ -189,7 +168,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
 
       setImageFile(file);
       
-      // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
@@ -200,13 +178,11 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     }
   };
 
-  // Handle image URL input
   const handleImageUrlChange = (url: string) => {
     setImagePreview(url);
     setNewExam(prev => ({ ...prev, image: url }));
   };
 
-  // Upload image to server (if needed)
   const uploadImageToServer = async (file: File): Promise<string> => {
     setIsUploadingImage(true);
     try {
@@ -223,7 +199,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
       }
 
       const data = await response.json();
-      return data.imageUrl; // Assuming the server returns { imageUrl: "..." }
+      return data.imageUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
       throw error;
@@ -239,12 +215,10 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         
         let finalImageUrl = newExam.image || '';
 
-        // If user uploaded a file, upload it to server first
         if (imageUploadType === 'file' && imageFile) {
           try {
             finalImageUrl = await uploadImageToServer(imageFile);
           } catch (error) {
-            // If image upload fails, continue without image or use the preview
             console.warn('Image upload failed, proceeding without server upload');
             finalImageUrl = imagePreview;
           }
@@ -272,9 +246,8 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         }
 
         const newExamData = await response.json();
-        setExams([...exams, newExamData]);
+        setExams(prevExams => [...prevExams, newExamData]);
         
-        // Reset form
         setNewExam({
           title: '',
           date: '',
@@ -297,8 +270,21 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     }
   };
 
-  const handleDeleteExam = (id: string) => {
-    setExams(exams.filter(exam => exam.id !== id));
+  const handleDeleteExam = async (id: string) => {
+    try {
+      const response = await fetch(`http://localhost:8081/api/exams/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete exam');
+      }
+
+      setExams(exams.filter(exam => exam.id !== id));
+    } catch (error) {
+      console.error('Error deleting exam:', error);
+      alert('Failed to delete exam. Please try again.');
+    }
   };
 
   const handleGenerateCertificate = (examId: string, examTitle: string) => {
@@ -331,7 +317,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
       const lines = text.split('\n');
       const data: StudentData[] = [];
       
-      // Skip header row and parse data
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line) {
@@ -340,7 +325,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
           
           if (name && !isNaN(percentage)) {
             data.push({
-              name: name.replace(/"/g, ''), // Remove quotes if present
+              name: name.replace(/"/g, ''),
               percentage: percentage,
               eligible: percentage >= 75
             });
@@ -364,13 +349,8 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     const eligibleStudents = studentData.filter(student => student.eligible);
     
     try {
-      // Simulate certificate generation process
       for (let i = 0; i < eligibleStudents.length; i++) {
         const student = eligibleStudents[i];
-        
-        console.log(`Generating certificate for ${student.name} with ${student.percentage}% using template ${selectedTemplate}`);
-        
-        // Simulate processing time
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
@@ -403,6 +383,14 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     window.URL.revokeObjectURL(url);
   };
 
+  if (isLoading) {
+    return (
+      <div className="p-3 sm:p-4 md:p-6 flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-3 sm:p-4 md:p-6">
       <div className="flex justify-between items-center mb-6">
@@ -418,7 +406,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         )}
       </div>
 
-      {/* Certificate Generation Modal */}
       {showCertificateModal && (
         <>
           <div 
@@ -428,7 +415,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen p-4">
               <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
                   <h2 className="text-xl font-semibold">
                     Generate Certificates - {selectedExam?.title}
@@ -442,7 +428,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                 </div>
 
                 <div className="p-6">
-                  {/* Step 1: Template Selection */}
                   <div className="mb-8">
                     <h3 className="text-lg font-medium mb-4">Step 1: Select Certificate Template</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -472,7 +457,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                     </div>
                   </div>
 
-                  {/* Step 2: CSV Upload */}
                   <div className="mb-8">
                     <h3 className="text-lg font-medium mb-4">Step 2: Upload Student Data (CSV)</h3>
                     
@@ -521,7 +505,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                     )}
                   </div>
 
-                  {/* Step 3: Preview Data */}
                   {showPreview && studentData.length > 0 && (
                     <div className="mb-8">
                       <h3 className="text-lg font-medium mb-4">Step 3: Preview Student Data</h3>
@@ -570,7 +553,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
                   <div className="flex justify-end space-x-4">
                     <button
                       onClick={() => setShowCertificateModal(false)}
@@ -594,12 +576,10 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         </>
       )}
 
-      {/* Enhanced Add Exam Form */}
       {showAddExam && (userType === 'admin' || userType === 'school') && (
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-6">
           <h2 className="text-lg font-semibold mb-4">Add New Exam</h2>
           
-          {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Exam Title *</label>
@@ -641,7 +621,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
             </div>
           </div>
 
-          {/* Description */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea
@@ -653,11 +632,9 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
             />
           </div>
 
-          {/* Image Upload Section */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-3">Exam Image</label>
             
-            {/* Upload Type Selector */}
             <div className="flex gap-4 mb-4">
               <button
                 type="button"
@@ -685,7 +662,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
               </button>
             </div>
 
-            {/* URL Input */}
             {imageUploadType === 'url' && (
               <div>
                 <input
@@ -701,7 +677,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
               </div>
             )}
 
-            {/* File Upload with Drag and Drop */}
             {imageUploadType === 'file' && (
               <div>
                 <div 
@@ -747,7 +722,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
               </div>
             )}
 
-            {/* Image Preview */}
             {imagePreview && (
               <div className="mt-4">
                 <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
@@ -777,7 +751,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
             )}
           </div>
 
-          {/* Form Actions */}
           <div className="flex justify-end space-x-2">
             <button
               type="button"
@@ -811,84 +784,96 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         </div>
       )}
 
-      {/* Exam List with Images */}
       <div className="grid grid-cols-1 gap-4">
-        {exams.map(exam => (
-          <div key={exam.id} className="bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden">
-            <div className="flex flex-col md:flex-row">
-              {/* Exam Image */}
-              {exam.image && (
-                <div className="md:w-48 h-48 md:h-auto overflow-hidden">
-                  <img 
-                    src={exam.image} 
-                    alt={exam.title}
-                    className="w-full h-full object-cover transition-transform duration-500 ease-in-out hover:scale-110"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-              
-              {/* Exam Content */}
-              <div className="flex-1 p-6">
-                <div className="flex flex-col md:flex-row justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">{exam.title}</h3>
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-1 text-education-blue" />
-                        <span>{formatDate(exam.date)}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-1 text-education-blue" />
-                        <span>{exam.time}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Info className="h-4 w-4 mr-1 text-education-blue" />
-                        <span>{exam.subject}</span>
-                      </div>
-                    </div>
-                    {exam.description && (
-                      <p className="text-sm text-gray-500 mb-4">{exam.description}</p>
-                    )}
+        {exams.length > 0 ? (
+          exams.map(exam => (
+            <div key={exam.id} className="bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden">
+              <div className="flex flex-col md:flex-row">
+                {exam.image && (
+                  <div className="md:w-48 h-48 md:h-auto overflow-hidden flex-shrink-0">
+                    <img 
+                      src={exam.image} 
+                      alt={exam.title}
+                      className="w-full h-full object-cover transition-transform duration-500 ease-in-out hover:scale-110"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                   </div>
-                  <div className="flex items-center space-x-2 mt-4 md:mt-0">
-                    {userType === 'student' && (
-                      <button className="flex items-center gap-1 px-3 py-1.5 bg-education-blue text-white rounded-md hover:bg-blue-700 transition-colors text-sm">
-                        <Download size={16} />
-                        Materials
-                      </button>
-                    )}
-                    {(userType === 'admin' || userType === 'school') && (
-                      <>
+                )}
+                
+                <div className="flex-1 p-6">
+                  <div className="flex flex-col md:flex-row justify-between h-full">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold mb-2">{exam.title}</h3>
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center">
+                          <Calendar className="h-4 w-4 mr-1 text-education-blue" />
+                          <span>{formatDate(exam.date)}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-1 text-education-blue" />
+                          <span>{exam.time}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Info className="h-4 w-4 mr-1 text-education-blue" />
+                          <span>{exam.subject}</span>
+                        </div>
+                      </div>
+                      {exam.description && (
+                        <p className="text-sm text-gray-500 mb-4">{exam.description}</p>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 mt-4 md:mt-0 md:ml-4">
+                      {userType === 'student' && (
                         <button 
-                          onClick={() => handleGenerateCertificate(exam.id, exam.title)}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm"
+                          className="flex items-center gap-1 px-3 py-1.5 bg-education-blue text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                          onClick={() => {/* Add download materials functionality */}}
                         >
-                          Generate Certificates
+                          <Download size={16} />
+                          Materials
                         </button>
-                        <button 
-                          onClick={() => handleDeleteExam(exam.id)}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-sm"
-                        >
-                          Delete
-                        </button>
-                      </>
-                    )}
+                      )}
+                      
+                      {(userType === 'admin' || userType === 'school') && (
+                        <>
+                          <button 
+                            onClick={() => handleGenerateCertificate(exam.id, exam.title)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm"
+                          >
+                            Generate Certificates
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteExam(exam.id)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-sm"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+          ))
+        ) : (
+          <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100 text-center">
+            <p className="text-gray-500">
+              {isLoading ? 'Loading exams...' : 'No upcoming exams at the moment.'}
+            </p>
+            {(userType === 'admin' || userType === 'school') && !isLoading && (
+              <button
+                onClick={() => setShowAddExam(true)}
+                className="mt-4 px-4 py-2 bg-education-blue text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Add New Exam
+              </button>
+            )}
           </div>
-        ))}
+        )}
       </div>
-
-      {exams.length === 0 && (
-        <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100 text-center">
-          <p className="text-gray-500">No upcoming exams at the moment.</p>
-        </div>
-      )}
     </div>
   );
 };

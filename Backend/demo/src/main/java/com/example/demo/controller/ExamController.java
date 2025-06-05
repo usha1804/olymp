@@ -3,12 +3,15 @@ package com.example.demo.controller;
 import com.example.demo.model.Exam;
 import com.example.demo.Service.ExamService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
-import java.nio.file.*;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.*;
 
 @RestController
@@ -19,12 +22,24 @@ public class ExamController {
     @Autowired
     private ExamService examService;
 
-    private static final String UPLOAD_DIR = "uploads/";
+    @Value("${supabase.url}")
+    private String supabaseUrl;
+
+    @Value("${supabase.api-key}")
+    private String supabaseApiKey;
+
+    @Value("${supabase.bucket-name}")
+    private String bucketName;
 
     // 🔵 Get all exams
     @GetMapping("/exams")
     public List<Exam> getAllExams() {
         return examService.getAllExams();
+    }
+    @DeleteMapping("/exams/{id}")
+    public ResponseEntity<?> deleteExam(@PathVariable UUID id) {
+        examService.deleteExam(id);
+        return ResponseEntity.ok().build();
     }
 
     // 🔵 Add exam
@@ -34,33 +49,50 @@ public class ExamController {
         return ResponseEntity.status(HttpStatus.CREATED).body(savedExam);
     }
 
-    // 🔵 Upload image
+    // 🔵 Upload image to Supabase Storage bucket
     @PostMapping("/upload/image")
     public ResponseEntity<?> uploadImage(@RequestParam("image") MultipartFile file) {
         try {
-            // Validate file type
             String fileType = file.getContentType();
+
             if (!List.of("image/jpeg", "image/jpg", "image/png").contains(fileType)) {
                 return ResponseEntity.badRequest().body("Invalid file type.");
             }
 
-            // Create upload directory if not exists
-            File uploadDir = new File(UPLOAD_DIR);
-            if (!uploadDir.exists()) {
-                uploadDir.mkdirs();
-            }
-
-            // Save file with unique name
+            // Generate unique file name
             String fileName = UUID.randomUUID().toString() + "-" + file.getOriginalFilename();
-            Path filePath = Paths.get(UPLOAD_DIR, fileName);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            String imageUrl = "http://localhost:8081/uploads/" + fileName;
+            // Supabase Storage upload URL
+            String uploadUrl = supabaseUrl + "/storage/v1/object/" + bucketName + "/" + fileName;
 
-            return ResponseEntity.ok().body(Map.of("imageUrl", imageUrl));
-        } catch (IOException e) {
+            // Create HTTP client
+            HttpClient client = HttpClient.newHttpClient();
+
+            // Build HTTP PUT request with file bytes and necessary headers
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(uploadUrl))
+                    .header("apikey", supabaseApiKey)
+                    .header("Authorization", "Bearer " + supabaseApiKey)
+                    .header("Content-Type", fileType)
+                    .PUT(HttpRequest.BodyPublishers.ofByteArray(file.getBytes()))
+                    .build();
+
+            // Send request and get response
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200 || response.statusCode() == 201) {
+                // Construct public URL assuming bucket is public
+                String imageUrl = supabaseUrl + "/storage/v1/object/public/" + bucketName + "/" + fileName;
+                return ResponseEntity.ok(Map.of("imageUrl", imageUrl));
+            } else {
+                return ResponseEntity.status(response.statusCode())
+                        .body(Map.of("error", "Upload failed: " + response.body()));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to upload image"));
+                    .body(Map.of("error", "Failed to upload image to Supabase"));
         }
     }
+    
 }

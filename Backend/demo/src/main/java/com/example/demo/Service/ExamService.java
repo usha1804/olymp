@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class ExamService {
@@ -20,4 +21,8 @@ public class ExamService {
     public Exam saveExam(Exam exam) {
         return examRepository.save(exam);
     }
+    public void deleteExam(UUID id) {
+        examRepository.deleteById(id);
+    }
+    
 }
