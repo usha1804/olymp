@@ -28,8 +28,9 @@ public class SecurityConfig {
                     "/api/signup",
                     "/api/login",
                     "/api/exams",
+                    "/api/exams/**", // Allow PUT /api/exams/{id}
                     "/api/upload/image",
-                    "/uploads/**" // ✅ Allow image URL access
+                    "/uploads/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             );

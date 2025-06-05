@@ -25,6 +25,8 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
   const [exams, setExams] = useState<Exam[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddExam, setShowAddExam] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingExamId, setEditingExamId] = useState<string | null>(null);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<number>(1);
@@ -152,6 +154,22 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     }
   };
 
+  const handleEditExam = (exam: Exam) => {
+    setIsEditing(true);
+    setEditingExamId(exam.id);
+    setNewExam({
+      title: exam.title,
+      date: exam.date,
+      time: exam.time,
+      subject: exam.subject,
+      description: exam.description || '',
+      image: exam.image || ''
+    });
+    setImagePreview(exam.image || '');
+    setImageUploadType(exam.image ? 'url' : 'file');
+    setShowAddExam(true);
+  };
+
   const handleImageFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -208,7 +226,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     }
   };
 
-  const handleAddExam = async () => {
+  const handleSaveExam = async () => {
     if (newExam.title && newExam.date && newExam.time && newExam.subject) {
       try {
         setIsProcessing(true);
@@ -233,21 +251,42 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
           image: finalImageUrl,
         };
 
-        const response = await fetch('http://localhost:8081/api/exams', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(examData),
-        });
+        if (isEditing && editingExamId) {
+  const response = await fetch(`http://localhost:8081/api/exams/${editingExamId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(examData),
+  });
 
-        if (!response.ok) {
-          throw new Error('Failed to add exam');
+          if (!response.ok) {
+            throw new Error('Failed to update exam');
+          }
+
+          const updatedExam = await response.json();
+          setExams(prevExams => prevExams.map(exam => 
+            exam.id === editingExamId ? updatedExam : exam
+          ));
+        } else {
+          // Add new exam
+          const response = await fetch('http://localhost:8081/api/exams', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(examData),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to add exam');
+          }
+
+          const newExamData = await response.json();
+          setExams(prevExams => [...prevExams, newExamData]);
         }
-
-        const newExamData = await response.json();
-        setExams(prevExams => [...prevExams, newExamData]);
         
+        // Reset form
         setNewExam({
           title: '',
           date: '',
@@ -260,32 +299,19 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         setImagePreview('');
         setIsDragOver(false);
         setShowAddExam(false);
+        setIsEditing(false);
+        setEditingExamId(null);
         
       } catch (error) {
-        console.error('Error adding exam:', error);
-        alert('Failed to add exam. Please try again.');
+        console.error(`Error ${isEditing ? 'updating' : 'adding'} exam:`, error);
+        alert(`Failed to ${isEditing ? 'update' : 'add'} exam. Please try again.`);
       } finally {
         setIsProcessing(false);
       }
     }
   };
 
-  const handleDeleteExam = async (id: string) => {
-    try {
-      const response = await fetch(`http://localhost:8081/api/exams/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete exam');
-      }
-
-      setExams(exams.filter(exam => exam.id !== id));
-    } catch (error) {
-      console.error('Error deleting exam:', error);
-      alert('Failed to delete exam. Please try again.');
-    }
-  };
+  
 
   const handleGenerateCertificate = (examId: string, examTitle: string) => {
     const exam = exams.find(e => e.id === examId);
@@ -397,7 +423,21 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         <h1 className="text-2xl font-bold">Upcoming Exams</h1>
         {(userType === 'admin' || userType === 'school') && (
           <button 
-            onClick={() => setShowAddExam(!showAddExam)}
+            onClick={() => {
+              setShowAddExam(!showAddExam);
+              setIsEditing(false);
+              setEditingExamId(null);
+              setNewExam({
+                title: '',
+                date: '',
+                time: '',
+                subject: '',
+                description: '',
+                image: ''
+              });
+              setImagePreview('');
+              setImageFile(null);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-education-blue text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             <Plus size={16} />
@@ -578,7 +618,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
 
       {showAddExam && (userType === 'admin' || userType === 'school') && (
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Add New Exam</h2>
+          <h2 className="text-lg font-semibold mb-4">{isEditing ? 'Edit Exam' : 'Add New Exam'}</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
@@ -767,6 +807,8 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                   description: '',
                   image: ''
                 });
+                setIsEditing(false);
+                setEditingExamId(null);
               }}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
             >
@@ -774,11 +816,11 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
             </button>
             <button
               type="button"
-              onClick={handleAddExam}
+              onClick={handleSaveExam}
               disabled={isProcessing || isUploadingImage}
               className="px-4 py-2 bg-education-blue text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isProcessing || isUploadingImage ? 'Adding...' : 'Add Exam'}
+              {isProcessing || isUploadingImage ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Update Exam' : 'Add Exam')}
             </button>
           </div>
         </div>
@@ -845,11 +887,12 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                             Generate Certificates
                           </button>
                           <button 
-                            onClick={() => handleDeleteExam(exam.id)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-sm"
+                            onClick={() => handleEditExam(exam)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
                           >
-                            Delete
+                            Edit
                           </button>
+                          
                         </>
                       )}
                     </div>
@@ -865,7 +908,21 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
             </p>
             {(userType === 'admin' || userType === 'school') && !isLoading && (
               <button
-                onClick={() => setShowAddExam(true)}
+                onClick={() => {
+                  setShowAddExam(true);
+                  setIsEditing(false);
+                  setEditingExamId(null);
+                  setNewExam({
+                    title: '',
+                    date: '',
+                    time: '',
+                    subject: '',
+                    description: '',
+                    image: ''
+                  });
+                  setImagePreview('');
+                  setImageFile(null);
+                }}
                 className="mt-4 px-4 py-2 bg-education-blue text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 Add New Exam
