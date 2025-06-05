@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,15 +30,107 @@ interface MockTest {
   isPopular?: boolean;
   isFree?: boolean;
   image?: string;
+  date?: string;
+  time?: string;
 }
 
 const MockTestsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("All");
   const [selectedDifficulty, setSelectedDifficulty] = useState("All");
+  const [mockTests, setMockTests] = useState<MockTest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Track which test cards have expanded topics
   const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
+
+  // Fetch mock tests from API
+  useEffect(() => {
+    const fetchMockTests = async () => {
+      try {
+        const response = await fetch('http://localhost:8081/api/exams');
+        if (!response.ok) {
+          throw new Error('Failed to fetch mock tests');
+        }
+        const data = await response.json();
+        
+        // Transform API data to match MockTest interface
+        const transformedTests: MockTest[] = data.map((exam: any) => ({
+          id: exam.id,
+          title: exam.title,
+          subject: exam.subject,
+          duration: 90, // Default duration - you might want to add this to your API
+          totalQuestions: 25, // Default - you might want to add this to your API
+          difficulty: "Medium" as const, // Default - you might want to add this to your API
+          rating: 4.5, // Default rating - you might want to add this to your API
+          participants: Math.floor(Math.random() * 2000) + 500, // Random participants for now
+          description: exam.description || "Practice test to improve your skills and knowledge.",
+          topics: ["General", exam.subject], // Default topics - you might want to expand this
+          isPopular: Math.random() > 0.7, // Random popular flag
+          isFree: Math.random() > 0.5, // Random free flag
+          image: exam.image,
+          date: exam.date,
+          time: exam.time
+        }));
+        
+        setMockTests(transformedTests);
+      } catch (error) {
+        console.error('Error fetching mock tests:', error);
+        setError('Failed to load mock tests. Please try again later.');
+        
+        // Fallback to static data if API fails
+        setMockTests([
+          {
+            id: "math-olympiad-1",
+            title: "Mathematics Olympiad Practice Test 1",
+            subject: "Mathematics",
+            duration: 90,
+            totalQuestions: 25,
+            difficulty: "Medium",
+            rating: 4.7,
+            participants: 1250,
+            description: "Comprehensive practice test covering algebra, geometry, and number theory concepts commonly found in mathematics olympiads.",
+            topics: ["Algebra", "Geometry", "Number Theory", "Combinatorics"],
+            isPopular: true,
+            isFree: true,
+            image: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+          },
+          {
+            id: "physics-olympiad-1",
+            title: "Physics Olympiad Mechanics",
+            subject: "Physics",
+            duration: 120,
+            totalQuestions: 30,
+            difficulty: "Hard",
+            rating: 4.5,
+            participants: 890,
+            description: "Advanced mechanics problems designed to test your understanding of classical physics principles.",
+            topics: ["Classical Mechanics", "Thermodynamics", "Waves", "Electromagnetism", "Quantum Physics", "Relativity"],
+            isPopular: true,
+            isFree: false
+          },
+          {
+            id: "chemistry-basic",
+            title: "Chemistry Fundamentals",
+            subject: "Chemistry",
+            duration: 60,
+            totalQuestions: 20,
+            difficulty: "Easy",
+            rating: 4.3,
+            participants: 2100,
+            description: "Perfect for beginners to test their knowledge of basic chemistry concepts and reactions.",
+            topics: ["Atomic Structure", "Chemical Bonding", "Stoichiometry", "Acids & Bases"],
+            isFree: true
+          }
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMockTests();
+  }, []);
 
   // Toggle topics expansion for a specific test
   const toggleTopicsExpansion = (testId: string) => {
@@ -48,93 +140,8 @@ const MockTestsPage = () => {
     }));
   };
 
-  // Mock data for tests
-  const mockTests: MockTest[] = [
-    {
-      id: "math-olympiad-1",
-      title: "Mathematics Olympiad Practice Test 1",
-      subject: "Mathematics",
-      duration: 90,
-      totalQuestions: 25,
-      difficulty: "Medium",
-      rating: 4.7,
-      participants: 1250,
-      description: "Comprehensive practice test covering algebra, geometry, and number theory concepts commonly found in mathematics olympiads.",
-      topics: ["Algebra", "Geometry", "Number Theory", "Combinatorics"],
-      isPopular: true,
-      isFree: true,
-      image: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    },
-    {
-      id: "physics-olympiad-1",
-      title: "Physics Olympiad Mechanics",
-      subject: "Physics",
-      duration: 120,
-      totalQuestions: 30,
-      difficulty: "Hard",
-      rating: 4.5,
-      participants: 890,
-      description: "Advanced mechanics problems designed to test your understanding of classical physics principles.",
-      topics: ["Classical Mechanics", "Thermodynamics", "Waves", "Electromagnetism", "Quantum Physics", "Relativity"],
-      isPopular: true,
-      isFree: false
-    },
-    {
-      id: "chemistry-basic",
-      title: "Chemistry Fundamentals",
-      subject: "Chemistry",
-      duration: 60,
-      totalQuestions: 20,
-      difficulty: "Easy",
-      rating: 4.3,
-      participants: 2100,
-      description: "Perfect for beginners to test their knowledge of basic chemistry concepts and reactions.",
-      topics: ["Atomic Structure", "Chemical Bonding", "Stoichiometry", "Acids & Bases"],
-      isFree: true
-    },
-    {
-      id: "math-advanced",
-      title: "Advanced Mathematics Challenge",
-      subject: "Mathematics",
-      duration: 150,
-      totalQuestions: 40,
-      difficulty: "Hard",
-      rating: 4.8,
-      participants: 567,
-      description: "For serious mathematics competitors. Features complex problems in advanced topics.",
-      topics: ["Calculus", "Linear Algebra", "Differential Equations", "Complex Analysis", "Real Analysis", "Abstract Algebra", "Topology"],
-      isPopular: true,
-      isFree: false
-    },
-    {
-      id: "biology-olympiad",
-      title: "Biology Olympiad Preparation",
-      subject: "Biology",
-      duration: 100,
-      totalQuestions: 35,
-      difficulty: "Medium",
-      rating: 4.4,
-      participants: 1456,
-      description: "Comprehensive biology test covering molecular biology, ecology, and genetics.",
-      topics: ["Molecular Biology", "Genetics", "Ecology", "Evolution", "Biochemistry", "Cell Biology"],
-      isFree: true
-    },
-    {
-      id: "computer-science",
-      title: "Computer Science Algorithms",
-      subject: "Computer Science",
-      duration: 120,
-      totalQuestions: 25,
-      difficulty: "Hard",
-      rating: 4.6,
-      participants: 734,
-      description: "Test your algorithmic thinking and programming problem-solving skills.",
-      topics: ["Data Structures", "Algorithms", "Dynamic Programming", "Graph Theory", "Machine Learning", "Database Systems", "Software Engineering"],
-      isFree: false
-    }
-  ];
-
-  const subjects = ["All", "Mathematics", "Physics", "Chemistry", "Biology", "Computer Science"];
+  // Get unique subjects from the loaded tests
+  const subjects = ["All", ...Array.from(new Set(mockTests.map(test => test.subject)))];
   const difficulties = ["All", "Easy", "Medium", "Hard"];
 
   // Filter tests based on search and filters
@@ -192,6 +199,36 @@ const MockTestsPage = () => {
       </div>
     );
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading mock tests...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 mb-4">
+            <BookOpen className="h-16 w-16 mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to Load Mock Tests</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -289,6 +326,10 @@ const MockTestsPage = () => {
                     src={test.image} 
                     alt={test.title}
                     className="w-full h-full object-cover transition-transform duration-500 ease-in-out hover:scale-110"
+                    onError={(e) => {
+                      // Fallback to gradient background if image fails to load
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -332,7 +373,7 @@ const MockTestsPage = () => {
                   {test.description}
                 </p>
 
-                {/* Topics - Using the new TopicsSection component */}
+                {/* Topics - Using the TopicsSection component */}
                 <TopicsSection test={test} />
 
                 {/* Stats */}
@@ -375,7 +416,7 @@ const MockTestsPage = () => {
         </div>
 
         {/* No Results */}
-        {filteredTests.length === 0 && (
+        {filteredTests.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No mock tests found</h3>
