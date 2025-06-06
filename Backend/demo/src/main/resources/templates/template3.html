@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Participation Certificate</title>
+    <style>
+        @page { size: A4 landscape; margin: 0; }
+        body {
+            font-family: 'Helvetica Neue', sans-serif;
+            background-color: #eef2f7;
+            margin: 0;
+            padding: 0;
+            width: 297mm;
+            height: 210mm;
+        }
+
+        .outer-box {
+            margin: 25mm;
+            padding: 20mm;
+            background-color: white;
+            border: 10px solid #3b82f6;
+            height: 160mm;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 36pt;
+            margin-bottom: 10px;
+            color: #1d4ed8;
+        }
+
+        .subtitle {
+            font-size: 18pt;
+            color: #374151;
+            margin-bottom: 20px;
+        }
+
+        .highlight {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+
+        .details {
+            font-size: 16pt;
+            color: #111827;
+            margin: 10px 0;
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 14pt;
+            color: #6b7280;
+        }
+
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
+        }
+
+        .sig {
+            width: 40%;
+            border-top: 2px solid #000;
+            padding-top: 8px;
+            font-size: 13pt;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="outer-box">
+        <h1>Certificate of Participation</h1>
+        <div class="subtitle">This is to acknowledge that</div>
+        <div class="highlight" th:text="${name}">Participant Name</div>
+
+        <div class="details">
+            has actively participated in<br />
+            <span class="highlight" th:text="${subject}">Event/Subject</span><br />
+            achieving <span th:text="${percentage}">Percentage</span> marks.
+        </div>
+
+        <div class="details">
+            Contact: <span th:text="${email}">email</span> / <span th:text="${phone}">phone</span>
+        </div>
+
+        <div class="footer">Issued on <span th:text="${date}">Date</span></div>
+
+        <div class="signatures">
+            <div class="sig">Coordinator</div>
+            <div class="sig">Principal</div>
+        </div>
+    </div>
+</body>
+</html>

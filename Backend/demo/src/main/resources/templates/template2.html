@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Achievement Certificate</title>
+    <style>
+        @page { size: A4 landscape; margin: 0; }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #fffbea;
+            font-family: 'Trebuchet MS', sans-serif;
+            width: 297mm;
+            height: 210mm;
+        }
+
+        .border {
+            border: 12px solid gold;
+            padding: 25mm;
+            margin: 10mm;
+            box-sizing: border-box;
+            height: 170mm;
+            text-align: center;
+            background: #ffffff;
+        }
+
+        h1 {
+            font-size: 40pt;
+            color: #8b8000;
+            margin-bottom: 0;
+        }
+
+        .subheader {
+            font-size: 20pt;
+            color: #444;
+            margin-top: 10px;
+        }
+
+        .recipient {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #222;
+            margin: 20px 0;
+        }
+
+        .info {
+            font-size: 18pt;
+            color: #555;
+        }
+
+        .emphasize {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 16pt;
+            color: #666;
+        }
+
+        .signature {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .signature-box {
+            width: 40%;
+            border-top: 1px solid #000;
+            font-size: 14pt;
+            padding-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="border">
+        <h1>Certificate of Achievement</h1>
+        <div class="subheader">Presented with honor to</div>
+        <div class="recipient" th:text="${name}">Recipient Name</div>
+        <div class="info">
+            has achieved excellence in the subject of
+            <span class="emphasize" th:text="${subject}">Subject</span><br />
+            with a percentage of
+            <span class="emphasize" th:text="${percentage}">Percentage</span>
+        </div>
+        <div class="info" style="margin-top: 20px;">
+            Email: <span th:text="${email}">email@example.com</span> |
+            Phone: <span th:text="${phone}">1234567890</span>
+        </div>
+        <div class="footer">
+            Awarded on <span th:text="${date}">Date</span>
+        </div>
+        <div class="signature">
+            <div class="signature-box">Instructor</div>
+            <div class="signature-box">Director</div>
+        </div>
+    </div>
+</body>
+</html>

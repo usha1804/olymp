@@ -57,6 +57,12 @@ public class CertificateTemplateService {
             context.setVariable("percentage", cert.getPercentage());
             context.setVariable("subject", cert.getSubject());
             context.setVariable("date", LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")));
+            
+            
+            String template = cert.getTemplateName(); // should be "template1", "template2", etc.
+            if (template == null || template.isBlank()) {
+                throw new IllegalArgumentException("Template name is missing in request");
+            }
 
             // Process the template
             String htmlContent = mytemplateEngine.process("certificate", context);
