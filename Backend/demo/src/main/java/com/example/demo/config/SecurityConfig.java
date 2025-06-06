@@ -25,11 +25,17 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/api/signup",
+                   "/api/signup",
                     "/api/login",
                     "/api/exams",
                     "/api/upload/image",
-                    "/uploads/**" // ✅ Allow image URL access
+                    "/uploads/**",
+                    // ✅ Allow image URL access
+                    "/api/pdf/upload",
+                    "/api/templates/upload",
+                    
+                    "/api/certificates/**",
+                    "/api/templates/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             );
@@ -46,6 +52,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowCredentials(true);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

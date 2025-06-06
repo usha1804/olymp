@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -66,45 +66,6 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-		<dependency>
-		    <groupId>org.apache.commons</groupId>
-		    <artifactId>commons-csv</artifactId>
-		    <version>1.12.0</version>
-		</dependency>
- <!-- https://mvnrepository.com/artifact/com.itextpdf/itextpdf -->
-<dependency>
-    <groupId>com.itextpdf</groupId>
-    <artifactId>itextpdf</artifactId>
-    <version>5.5.13.3</version>
-</dependency>
-
-<dependency>
-    <groupId>com.itextpdf</groupId>
-    <artifactId>kernel</artifactId>
-    <version>7.2.5</version>
-</dependency>
-
-<dependency>
-    <groupId>com.itextpdf</groupId>
-    <artifactId>layout</artifactId>
-    <version>7.2.5</version>
-</dependency>
-
-<!-- Thymeleaf -->
-
-
-<!-- OpenHTMLToPDF for PDF generation -->
-<dependency>
-    <groupId>com.openhtmltopdf</groupId>
-    <artifactId>openhtmltopdf-pdfbox</artifactId>
-    <version>1.0.10</version>
-</dependency>
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-thymeleaf</artifactId>
-			<version>3.1.1</version>
-		</dependency>
     </dependencies>
 
     <build>
@@ -153,6 +114,3 @@
     </pluginRepositories>
 
 </project>
-
-
-

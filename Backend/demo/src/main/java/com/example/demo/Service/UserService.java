@@ -11,6 +11,7 @@ import com.example.demo.model.User;
 @Service
 public class UserService {
 
+    
     @Autowired
     private UserRepository userRepository;
     
@@ -44,5 +45,6 @@ public class UserService {
         
         return user;
     }
+    
 
 }

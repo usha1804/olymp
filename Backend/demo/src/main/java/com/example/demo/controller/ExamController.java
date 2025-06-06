@@ -15,6 +15,7 @@ import java.net.http.HttpResponse;
 import java.util.*;
 
 @RestController
+
 @CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("/api")
 public class ExamController {

@@ -16,9 +16,9 @@ interface UpcomingExamsProps {
 }
 
 interface StudentData {
-  name: string;
-  percentage: number;
-  eligible: boolean;
+  userId: number; // Changed from name to userId
+  percentage: string; // Store as string for API
+  eligible: boolean; // Keep for UI display
 }
 
 const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
@@ -320,14 +320,14 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line) {
-          const [name, percentageStr] = line.split(',').map(item => item.trim());
-          const percentage = parseFloat(percentageStr);
+          const [userIdStr, percentage] = line.split(',').map(item => item.trim());
+          const userId = parseInt(userIdStr);
           
-          if (name && !isNaN(percentage)) {
+          if (!isNaN(userId) && percentage) {
             data.push({
-              name: name.replace(/"/g, ''),
-              percentage: percentage,
-              eligible: percentage >= 75
+              userId,
+              percentage: percentage.replace(/"/g, ''), // Store as string
+              eligible: parseFloat(percentage) > 75 // For UI display
             });
           }
         }
@@ -342,24 +342,43 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
   };
 
   const handleGenerateCertificates = async () => {
-    if (!selectedExam || studentData.length === 0) return;
+    if (!selectedExam) return;
     
     setIsProcessing(true);
     
-    const eligibleStudents = studentData.filter(student => student.eligible);
+    // Prepare JSON payload with all students
+    const payload = studentData.map(student => ({
+      userId: student.userId,
+      percentage: student.percentage,
+      subject: selectedExam.subject
+    }));
     
     try {
-      for (let i = 0; i < eligibleStudents.length; i++) {
-        const student = eligibleStudents[i];
-        await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await fetch('http://localhost:8081/api/templates/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok) {
+        // Log raw response for debugging
+        const errorText = await response.text();
+        console.error('Raw server response:', errorText);
+        throw new Error(`Failed to generate certificates: ${response.status} ${response.statusText} - ${errorText}`);
       }
       
-      alert(`Successfully generated ${eligibleStudents.length} certificates!`);
+      // Parse JSON response
+      const result = await response.json();
+      console.log('API Response:', result);
+      
+      alert('Generated successfully!');
       setShowCertificateModal(false);
       
     } catch (error) {
       console.error('Error generating certificates:', error);
-      alert('Error generating certificates. Please try again.');
+      alert(`Error generating certificates: ${error.message}. Please check the server and try again.`);
     } finally {
       setIsProcessing(false);
     }
@@ -371,7 +390,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
   };
 
   const downloadSampleCSV = () => {
-    const csvContent = "Student Name,Percentage\nJohn Doe,85\nJane Smith,92\nMike Johnson,67\nSarah Wilson,78";
+    const csvContent = "userId,Percentage\n1,92\n2,85\n3,67\n4,78";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -414,7 +433,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
           />
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[500px] overflow-y-auto">
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
                   <h2 className="text-xl font-semibold">
                     Generate Certificates - {selectedExam?.title}
@@ -438,7 +457,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                           className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
                             selectedTemplate === template.id
                               ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300'
+                              : 'border-gray-200 hover:border-blue-300'
                           }`}
                         >
                           <div className="h-32 bg-gray-100 rounded mb-3 flex items-center justify-center">
@@ -488,10 +507,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                           </button>
                         </div>
                         <p className="mt-2 text-sm text-gray-600">
-                          Upload a CSV file with columns: Student Name, Percentage
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Only students with 75% or above will receive certificates
+                          Upload a CSV file with columns: userId, Percentage
                         </p>
                       </div>
                     </div>
@@ -526,7 +542,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                         <table className="w-full">
                           <thead className="bg-gray-50 sticky top-0">
                             <tr>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Student Name</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">User ID</th>
                               <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Percentage</th>
                               <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Status</th>
                             </tr>
@@ -534,7 +550,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                           <tbody className="divide-y divide-gray-200">
                             {studentData.map((student, index) => (
                               <tr key={index} className={student.eligible ? 'bg-green-50' : 'bg-red-50'}>
-                                <td className="px-4 py-3 text-sm text-gray-900">{student.name}</td>
+                                <td className="px-4 py-3 text-sm text-gray-900">{student.userId}</td>
                                 <td className="px-4 py-3 text-sm text-gray-900">{student.percentage}%</td>
                                 <td className="px-4 py-3 text-sm">
                                   <span className={`px-2 py-1 rounded-full text-xs ${
@@ -562,11 +578,10 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                     </button>
                     <button
                       onClick={handleGenerateCertificates}
-                      disabled={!showPreview || studentData.filter(s => s.eligible).length === 0 || isProcessing}
+                      disabled={isProcessing}
                       className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isProcessing ? 'Generating...' : 
-                       `Generate ${studentData.filter(s => s.eligible).length} Certificates`}
+                      {isProcessing ? 'Generating...' : `Generate ${studentData.length} Certificates`}
                     </button>
                   </div>
                 </div>
@@ -731,7 +746,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                     alt="Exam preview" 
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjOTk5IiBzdHJva2U9IiM5OTkiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=';
+                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCA2NCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjOTk5IiBzdHJva2U9IiM5OTkiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=';
                       e.currentTarget.alt = 'Failed to load image';
                     }}
                   />

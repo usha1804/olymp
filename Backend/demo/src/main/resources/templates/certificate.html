@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Certificate of Completion</title>
+    <style type="text/css">
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+
+        body {
+            width: 297mm;
+            height: 210mm;
+            margin: 0;
+            padding: 0;
+            font-family: 'Georgia', serif;
+            background: #fdf6e3;
+        }
+
+        .certificate-container {
+            border: 10px solid #1e293b;
+            margin: 20mm;
+            padding: 20mm;
+            text-align: center;
+            box-sizing: border-box;
+            height: 150mm;
+            background-color: #ffffff;
+        }
+
+        .certificate-inner {
+            border: 4px dashed #334155;
+            padding: 20mm;
+            box-sizing: border-box;
+            height: 100%;
+        }
+
+        h1 {
+            font-size: 36pt;
+            color: #1e3a8a;
+            margin: 0;
+        }
+
+        .subtitle {
+            font-size: 18pt;
+            margin: 20px 0;
+        }
+
+        .content {
+            font-size: 16pt;
+            line-height: 1.6;
+            color: #1f2937;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #dc2626;
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 14pt;
+            color: #64748b;
+        }
+
+        .signature-table {
+            margin: 40px auto 0 auto;
+            width: 80%;
+        }
+
+        .sign-box {
+            border-top: 1px solid #000;
+            padding-top: 10px;
+            font-size: 12pt;
+            text-align: center;
+            width: 50%;
+        }
+
+        .contact-info {
+            font-size: 14pt;
+            margin-top: 15px;
+            color: #334155;
+        }
+    </style>
+</head>
+<body>
+    <div class="certificate-container">
+        <div class="certificate-inner">
+            <h1>Certificate of Completion</h1>
+            <div class="subtitle">This certificate is proudly presented to</div>
+
+            <div class="content">
+                <p><span class="highlight" th:text="${name}">Student Name</span></p>
+                <p>for successfully completing the subject</p>
+                <p><span class="highlight" th:text="${subject}">Subject Name</span></p>
+                <p>Percentage: <span class="highlight" th:text="${percentage}">95%</span></p>
+
+                <div class="contact-info">
+                    <p>Email: <span th:text="${email}">student@example.com</span></p>
+                    <p>Phone: <span th:text="${phone}">9876543210</span></p>
+                </div>
+            </div>
+
+            <div class="footer">Awarded on <span th:text="${date}">01 June 2025</span></div>
+
+            <table class="signature-table" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td class="sign-box">Authorized Signatory</td>
+                    <td class="sign-box">Head of Department</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
