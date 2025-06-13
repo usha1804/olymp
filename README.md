@@ -6,9 +6,7 @@ A dynamic vendor-style full stack web application built using **React + Tailwind
 
 ## 🔗 Live Preview
 
-🌐 [Frontend Hosted on Lovable](https://lovable.dev/projects/d3b67260-2e7d-4490-9b17-f5891ff225bf)
-
----
+🌐 [Frontend Hosted on Vercel]https://vercel.com/surapally-ushas-projects/olymp      
 
 ## 🎯 Core Features
 
@@ -20,7 +18,6 @@ A dynamic vendor-style full stack web application built using **React + Tailwind
 - 🗄️ Integrated with MySQL for persistent data storage
 
 ---
-
 ## 🛠️ Tech Stack
 
 | Layer        | Technology                                      |
