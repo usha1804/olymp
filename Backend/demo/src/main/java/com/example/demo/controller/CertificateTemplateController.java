@@ -1,13 +1,5 @@
-package com.example.demo.controller;
 
-import com.example.demo.Service.CertificateTemplateService;
-import com.example.demo.dto.CertificateRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+package com.example.demo.controller;
 
 import java.io.IOException;
 import java.net.URI;
@@ -16,7 +8,26 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.demo.Service.CertificateTemplateService;
+import com.example.demo.dto.CertificateRequest;
+import com.example.demo.model.CertificateTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("/api/templates")
@@ -71,13 +82,12 @@ public class CertificateTemplateController {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse("error", "Invalid input: " + e.getMessage()));
         } catch (Exception e) {
-            e.printStackTrace(); // For backend debugging
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse("error", "Internal server error: " + e.getMessage()));
         }
     }
 
-    // Preview Template (used in Thymeleaf view rendering, not API response)
     @GetMapping("/preview/{templateName}")
     public String previewTemplate(@PathVariable String templateName, Model model) {
         model.addAttribute("name", "John Doe");
@@ -89,7 +99,29 @@ public class CertificateTemplateController {
         return templateName;
     }
 
-    // ✅ Get certificates by student name
+    @GetMapping("/all")
+    public ResponseEntity<List<CertificateTemplate>> getAllTemplates() {
+        try {
+            List<CertificateTemplate> templates = service.getAllTemplates();
+            return ResponseEntity.ok(templates);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping("/generate-preview/{templateId}")
+    public ResponseEntity<ApiResponse> generateTemplatePreview(@PathVariable Long templateId) {
+        try {
+            String previewUrl = service.generateAndUploadPreviewImage(templateId);
+            return ResponseEntity.ok(new ApiResponse("success", "Preview generated and uploaded: " + previewUrl));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse("error", "Failed to generate preview: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/certificates/student/{studentName}")
     public ResponseEntity<List<String>> getCertificatesByStudent(@PathVariable String studentName) throws IOException, InterruptedException {
         String path = "certificates/" + studentName + "/";
@@ -120,7 +152,6 @@ public class CertificateTemplateController {
         return ResponseEntity.ok(urls);
     }
 
-    // ✅ Get certificates by subject name
     @GetMapping("/certificates/subject/{subjectName}")
     public ResponseEntity<List<String>> getCertificatesBySubject(@PathVariable String subjectName) throws IOException, InterruptedException {
         String path = "certificates/";
@@ -152,7 +183,6 @@ public class CertificateTemplateController {
         return ResponseEntity.ok(urls);
     }
 
-    // ✅ Get all certificates
     @GetMapping("/certificates/all")
     public ResponseEntity<List<String>> getAllCertificates() throws IOException, InterruptedException {
         String path = "certificates/";

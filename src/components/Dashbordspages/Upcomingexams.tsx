@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Clock, Calendar, Info, Download, Plus, Upload, X, FileText, Check, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
 
@@ -22,9 +23,10 @@ interface StudentData {
 }
 
 interface Template {
+  id: string;
   name: string;
-  title: string;
-  previewUrl: string;
+  description: string;
+  previewImageUrl: string | null;
 }
 
 const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
@@ -35,7 +37,8 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
   const [editingExamId, setEditingExamId] = useState<string | null>(null);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('template1');
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [certificateTemplates, setCertificateTemplates] = useState<Template[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [studentData, setStudentData] = useState<StudentData[]>([]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -60,12 +63,6 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
     image: ''
   });
 
-  const certificateTemplates: Template[] = [
-    { name: 'template1', title: 'Classic', previewUrl: 'http://localhost:8081/api/templates/preview/template1' },
-    { name: 'template2', title: 'Gold', previewUrl: 'http://localhost:8081/api/templates/preview/template2' },
-    { name: 'template3', title: 'Blue', previewUrl: 'http://localhost:8081/api/templates/preview/template3' }
-  ];
-
   useEffect(() => {
     const fetchExams = async () => {
       try {
@@ -82,11 +79,27 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         setIsLoading(false);
       }
     };
-    fetchExams();
-  }, []);
 
-  useEffect(() => {
-    setPreviewUrl(certificateTemplates[0].previewUrl);
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch('http://localhost:8081/api/templates/all');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch templates: ${response.status}`);
+        }
+        const data: Template[] = await response.json();
+        setCertificateTemplates(data);
+        if (data.length > 0 && data[0].previewImageUrl) {
+          setSelectedTemplate(data[0].id);
+          setPreviewUrl(data[0].previewImageUrl);
+        }
+      } catch (error) {
+        console.error('Error fetching templates:', error);
+        alert('Failed to load templates. Please ensure previews are generated.');
+      }
+    };
+
+    fetchExams();
+    fetchTemplates();
   }, []);
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -279,8 +292,13 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
       setStudentData([]);
       setCsvFile(null);
       setShowPreview(false);
-      setSelectedTemplate('template1');
-      setPreviewUrl(certificateTemplates[0].previewUrl);
+      if (certificateTemplates.length > 0 && certificateTemplates[0].previewImageUrl) {
+        setSelectedTemplate(certificateTemplates[0].id);
+        setPreviewUrl(certificateTemplates[0].previewImageUrl);
+      } else {
+        setSelectedTemplate('');
+        setPreviewUrl('');
+      }
       setFailedImages(new Set());
     }
   };
@@ -334,7 +352,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
   };
 
   const handleGenerateCertificates = async () => {
-    if (!selectedExam) return;
+    if (!selectedExam || !selectedTemplate) return;
     setIsProcessing(true);
     const payload = studentData.map(student => ({
       userId: student.userId,
@@ -348,21 +366,12 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Raw server response:', errorText);
-        throw new Error(`Failed to generate certificates: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`Failed to generate certificates: ${response.status} ${errorText}`);
       }
-      let result;
-      try {
-        result = await response.json();
-        console.log('API Response:', result);
-      } catch (jsonError) {
-        console.error('JSON Parse Error:', jsonError);
-        throw new Error('Invalid JSON response from server');
-      }
+      const result = await response.json();
       if (result.status === 'error') {
         throw new Error(result.message);
       }
@@ -447,56 +456,59 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                 <div className="p-6">
                   <div className="mb-8">
                     <h3 className="text-lg font-medium mb-4">Step 1: Select Certificate Template</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {certificateTemplates.map((template) => (
-                        <div
-                          key={template.name}
-                          onClick={() => {
-                            setSelectedTemplate(template.name);
-                            setPreviewUrl(template.previewUrl);
-                          }}
-                          className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                            selectedTemplate === template.name
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-blue-300'
-                          }`}
-                        >
-                          <div className="h-32 bg-gray-100 rounded mb-3 overflow-hidden">
-                            {failedImages.has(template.previewUrl) ? (
-                              <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                <svg className="h-12 w-12 text-gray-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M12 2L15.09 8.26L22 9L15.09 15.74L12 22L8.91 15.74L2 9L8.91 8.26L12 2Z" fill="#999" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
+                    {certificateTemplates.length === 0 ? (
+                      <p className="text-gray-500">No templates available. Please contact the administrator.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {certificateTemplates.map((template) => (
+                          <div
+                            key={template.id}
+                            onClick={() => {
+                              setSelectedTemplate(template.id);
+                              setPreviewUrl(template.previewImageUrl || '');
+                            }}
+                            className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                              selectedTemplate === template.id
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-blue-300'
+                            }`}
+                          >
+                            <div className="h-32 bg-gray-100 rounded mb-3 overflow-hidden flex items-center justify-center">
+                              {template.previewImageUrl && !failedImages.has(template.previewImageUrl) ? (
+                                <img
+                                  src={template.previewImageUrl}
+                                  alt={template.name}
+                                  className="w-full h-full object-cover"
+                                  onError={() => setFailedImages(prev => new Set(prev).add(template.previewImageUrl!))}
+                                />
+                              ) : (
+                                <div className="text-gray-500 text-sm text-center">
+                                  No preview available
+                                </div>
+                              )}
+                            </div>
+                            <h4 className="font-medium">{template.name}</h4>
+                            <p className="text-sm text-gray-600">{template.description}</p>
+                            {selectedTemplate === template.id && (
+                              <div className="mt-2 flex items-center text-blue-600">
+                                <Check size={16} className="mr-1" />
+                                <span className="text-sm">Selected</span>
                               </div>
-                            ) : (
-                              <img
-                                src={template.previewUrl}
-                                alt={template.title}
-                                className="w-full h-full object-cover"
-                                onError={() => setFailedImages(prev => new Set(prev).add(template.previewUrl))}
-                              />
                             )}
                           </div>
-                          <h4 className="font-medium">{template.title}</h4>
-                          <p className="text-sm text-gray-600">{template.title} Template</p>
-                          {selectedTemplate === template.name && (
-                            <div className="mt-2 flex items-center text-blue-600">
-                              <Check size={16} className="mr-1" />
-                              <span className="text-sm">Selected</span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                     {previewUrl && (
                       <div className="mt-6 border rounded shadow p-4 h-96">
-                        <iframe
+                        <img
                           src={previewUrl}
-                          title="Template Preview"
-                          className="w-full h-full rounded"
-                          frameBorder="0"
-                          sandbox="allow-scripts allow-same-origin"
-                          onError={() => alert('Failed to load template preview. Please check the preview URL.')}
+                          alt="Template Preview"
+                          className="w-full h-full object-contain"
+                          onError={() => {
+                            setPreviewUrl('');
+                            alert('Failed to load template preview. Please ensure the preview image exists.');
+                          }}
                         />
                       </div>
                     )}
@@ -596,7 +608,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                     </button>
                     <button
                       onClick={handleGenerateCertificates}
-                      disabled={isProcessing || studentData.length === 0}
+                      disabled={isProcessing || studentData.length === 0 || !selectedTemplate}
                       className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isProcessing ? 'Generating...' : `Generate ${studentData.length} Certificates`}
@@ -668,23 +680,24 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
               <button 
                 type="button"
                 onClick={() => setImageUploadType('url')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${ 
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
                   imageUploadType === 'url' 
                     ? 'bg-blue-50 border-blue-300 text-blue-700' 
                     : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'
- 
-                }">
+                }`}
+              >
                 <LinkIcon size={16} />
                 Image URL
               </button>
               <button 
                 type="button" 
                 onClick={() => setImageUploadType('file')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${ 
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
                   imageUploadType === 'file' 
                     ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                    : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100' 
-                }">
+                    : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
                 <Upload size={16} />
                 Upload File
               </button>
@@ -752,7 +765,7 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                     alt="Exam preview" 
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQ2iIgZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEyIDIyTDE1LjA5IDguMjZMMjIgOUwxNS4wOSAxNS43NE0xMiAyMkw4LjkxIDE1Ljc0TDIgOUw5LjkxIDguMjZMMiAyWiIgZmlsbD0iIzk5OSIgc3Ryb2tlPSIjOTk5IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==';
+                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTUuMDkgOC4yNkwyMiA5TDE1LjA5IDE1Ljc0TDEyIDIyTDguOTEgMTUuNzRMMiA5TDguOTEgOC4yNkwxMiAyWiIgZmlsbD0iIzk5OSIgc3Ryb2tlPSIjOTk5IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==';
                       e.currentTarget.alt = 'Failed to load image';
                     }}
                   />
@@ -811,8 +824,8 @@ const UpcomingExams: React.FC<UpcomingExamsProps> = ({ userType }) => {
                       alt={exam.title}
                       className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                       onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTUuMDkgOC4yNjLMMiI9TDE4LjA5IDE1Ljc0TDEyIDIyTDguOTEgMTUuNzRMMiA5TDguOTEgOC4yNkwxMiAyWiIgZmlsbD0iIzk5OSIgc3Ryb2tlPSIjOTk5IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==';
-            e.currentTarget.alt = 'Failed to load exam image';
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTUuMDkgOC4yNkwyMiA5TDE1LjA5IDE1Ljc0TDEyIDIyTDguOTEgMTUuNzRMMiA9TDguOTEgOC4yNkwxMiAyWiIgZmlsbD0iIzk5OSIgc3Ryb2tlPSIjOTk5IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==';
+                        e.currentTarget.alt = 'Failed to load exam image';
                       }}
                     />
                   </div>

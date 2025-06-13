@@ -21,5 +21,6 @@ public class CertificateTemplate {
     private String description;
 
     private String filePath;
+     private String previewImageUrl; // Added field for preview image URL
 
 }
